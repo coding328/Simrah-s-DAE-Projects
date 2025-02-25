@@ -1,18 +1,20 @@
 using UnityEngine;
-
-public class CarvingManager : MonoBehaviour
-{ using UnityEngine;
 using UnityEngine.UI;
+using System.Collections.Generic;  // Add this to fix the error
 
 public class CarvingManager : MonoBehaviour
 {
     public GameObject carvingTool;  // The carving tool (chisel)
     public GameObject woodBlock;  // The wood block where we carve
     public GameObject crescentMoonOutline;  // The crescent moon shape
-    public Text feedbackText;  // The UI text to display feedback (Well Done! or Try Again)
+    public Text feedbackText;  // The UI text to display feedback
+
 
     private bool isCarvingComplete = false;
     private bool isCarvedOutside = false;
+
+    // For simplicity, you could track if we've carved enough to finish the task
+    private HashSet<Vector2> carvedPositions = new HashSet<Vector2>(); // Set of positions that have been carved
 
     void Start()
     {
@@ -42,11 +44,18 @@ public class CarvingManager : MonoBehaviour
 
     void Carve()
     {
-        // Check if the carving tool is within the moon outline
+        // Check if the carving tool is inside the moon outline
         if (IsCarvingInsideMoonOutline())
         {
             // Simulate carving by changing the wood color to gray (you can add better effects here)
             woodBlock.GetComponent<SpriteRenderer>().color = Color.gray;
+
+            // Record this position as a carved spot (we add the position of the carving tool)
+            Vector2 carvingPosition = carvingTool.transform.position;
+            if (!carvedPositions.Contains(carvingPosition))
+            {
+                carvedPositions.Add(carvingPosition);
+            }
 
             // Check if the player carved outside the outline
             if (!IsCarvingInsideMoonOutline())
@@ -54,7 +63,7 @@ public class CarvingManager : MonoBehaviour
                 isCarvedOutside = true;
             }
 
-            // If carving is complete, show the "Well Done!" message
+            // If carving is complete (enough area carved), show the "Well Done!" message
             if (IsCarvingComplete())
             {
                 CompleteCarving();
@@ -64,16 +73,22 @@ public class CarvingManager : MonoBehaviour
 
     bool IsCarvingInsideMoonOutline()
     {
-        // For simplicity, we'll just check if the carving tool is inside the moon outline
-        // You can improve this by adding a 2D Collider to the outline and checking if the tool is within it
-        return true;  // For now, just return true (you can add better collision later)
+        // Use a 2D Collider (e.g., BoxCollider2D) on the crescentMoonOutline to check if the carving tool is within it
+        Collider2D moonCollider = crescentMoonOutline.GetComponent<Collider2D>();
+
+        // Check if the carving tool's position is inside the moon's collider area
+        if (moonCollider != null)
+        {
+            return moonCollider.OverlapPoint(carvingTool.transform.position);
+        }
+
+        return false;  // Default return if no collider is attached
     }
 
     bool IsCarvingComplete()
     {
-        // You can add more logic here to check if the moon is fully carved out.
-        // For now, we'll say it's complete once the player interacts with the outline.
-        return true;
+        // Check if a sufficient number of carving positions are covered.
+        return carvedPositions.Count > 50;  // Adjust this threshold as needed
     }
 
     void CompleteCarving()
@@ -90,18 +105,8 @@ public class CarvingManager : MonoBehaviour
 
         // Reset the wood block's color (or you can reset other states)
         woodBlock.GetComponent<SpriteRenderer>().color = Color.white;  // Reset to original color
-    }
-}
 
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
-    void Start()
-    {
-        
-    }
-
-    // Update is called once per frame
-    void Update()
-    {
-        
+        // Clear the carved positions
+        carvedPositions.Clear();
     }
 }
