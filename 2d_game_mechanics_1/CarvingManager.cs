@@ -21,15 +21,21 @@ public class CarvingManager : MonoBehaviour
     void Start()
     {
         feedbackText.text = "";  // Start with no feedback
+
+        // Ensure carving tool is in front of the wood block (Z-axis position)
+        SetCarvingToolSortingLayerAndOrder();
+
+        // Optionally, set up the sorting layer manually in the script
+        SetCarvingToolZPosition();
     }
 
     void Update()
     {
         if (isCarvingComplete) return;  // Don't do anything if the game is complete
 
-        // Move the carving tool to where the mouse is
+        // Move the carving tool to where the mouse is (Z = 1 to ensure it's in front)
         Vector2 mousePosition = Camera.main.ScreenToWorldPoint(Input.mousePosition);
-        carvingTool.transform.position = mousePosition;
+        carvingTool.transform.position = new Vector3(mousePosition.x, mousePosition.y, 1f); // Set Z = 1
 
         // Carve when the mouse is pressed
         if (Input.GetMouseButton(0))  // Left click to carve
@@ -60,7 +66,8 @@ public class CarvingManager : MonoBehaviour
             if (!carvedPositions.Contains(carvingPosition))
             {
                 carvedPositions.Add(carvingPosition);
-                // Optionally, you could apply a texture effect or color to the wood block here
+                // Simulate carving by turning the touched area gray
+                ChangeWoodColorAtPosition(carvingPosition);
             }
 
             // Check if the player carved outside the outline
@@ -98,9 +105,17 @@ public class CarvingManager : MonoBehaviour
 
     bool IsTouchingMoonOutline()
     {
-        // Check if the carving tool is touching the crescent moon outline
+        // Check if the carving tool is touching the crescent moon outline (any part of the tool)
+        Collider2D carvingToolCollider = carvingTool.GetComponent<Collider2D>();
         Collider2D moonCollider = crescentMoonOutline.GetComponent<Collider2D>();
-        return moonCollider != null && moonCollider.OverlapPoint(carvingTool.transform.position);
+
+        if (carvingToolCollider != null && moonCollider != null)
+        {
+            bool isTouching = carvingToolCollider.IsTouching(moonCollider);
+            return isTouching;
+        }
+
+        return false;
     }
 
     bool IsCarvingComplete()
@@ -126,8 +141,7 @@ public class CarvingManager : MonoBehaviour
         // Redraw the carved positions (if needed, you could create a texture effect for the carved area)
         foreach (var pos in carvedPositions)
         {
-            // You could add some carving effect here, like changing the wood color to gray for carved areas
-            woodBlock.GetComponent<SpriteRenderer>().color = Color.gray; // Or apply carving effect here
+            ChangeWoodColorAtPosition(pos);
         }
     }
 
@@ -143,5 +157,42 @@ public class CarvingManager : MonoBehaviour
 
         // Reset the wood block's color (or you can reset other states)
         woodBlock.GetComponent<SpriteRenderer>().color = Color.white;  // Reset to original color
+    }
+
+    // Function to change color of wood at the carved position
+    void ChangeWoodColorAtPosition(Vector2 position)
+    {
+        // Apply a carving effect at the touched position.
+        // This can be done by changing the color or applying a custom texture at that position.
+        // For simplicity, let's use a gray color for carving simulation.
+
+        SpriteRenderer woodRenderer = woodBlock.GetComponent<SpriteRenderer>();
+        Texture2D texture = woodRenderer.sprite.texture;
+
+        // Convert world position to texture coordinates
+        Vector2 localPos = position - (Vector2)woodBlock.transform.position;
+        Vector2 texturePos = new Vector2(localPos.x * texture.width / woodBlock.GetComponent<SpriteRenderer>().bounds.size.x, 
+                                         localPos.y * texture.height / woodBlock.GetComponent<SpriteRenderer>().bounds.size.y);
+
+        // Make sure the texture position is valid
+        if (texturePos.x >= 0 && texturePos.x < texture.width && texturePos.y >= 0 && texturePos.y < texture.height)
+        {
+            texture.SetPixel((int)texturePos.x, (int)texturePos.y, Color.gray);  // Set gray color at the touched area
+            texture.Apply();  // Apply the texture changes
+        }
+    }
+
+    // Ensure carving tool is in front of the wood block by setting Z position
+    void SetCarvingToolZPosition()
+    {
+        carvingTool.transform.position = new Vector3(carvingTool.transform.position.x, carvingTool.transform.position.y, 1f); // Set Z = 1
+    }
+
+    // Set the sorting layer and order for the carving tool (ensures it's in front of the wood block)
+    void SetCarvingToolSortingLayerAndOrder()
+    {
+        SpriteRenderer carvingToolRenderer = carvingTool.GetComponent<SpriteRenderer>();
+        carvingToolRenderer.sortingLayerName = "CarvingTool"; // Set to the "CarvingTool" sorting layer
+        carvingToolRenderer.sortingOrder = 1;  // Ensure it's on top of the wood block
     }
 }
